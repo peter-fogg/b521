@@ -1,0 +1,24 @@
+#lang racket
+(provide (all-defined-out))
+(define sort-list-of-symbols
+  (lambda (ls)
+    (list-sort lex<=? ls)))
+
+(define sort-unify-result
+  (lambda (ls)
+    (let ((sls (map (lambda (e) (let ((a (car e))
+				 (d (cdr e)))
+			     (if (and (symbol? d) (lex<=? d a))
+				 `(,d . ,a)
+				 e)))
+		    ls)))
+      (list-sort (lambda (a b) (lex<=? a b)) sls))))
+
+(define lex<=?
+  (lambda (x y)
+    (string<=? (datum->string x) (datum->string y))))
+
+(define datum->string
+  (lambda (x)
+    (call-with-string-output-port
+      (lambda (p) (display x p)))))

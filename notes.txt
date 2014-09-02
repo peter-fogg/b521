@@ -1,0 +1,185 @@
+8-26
+
+B521
+
+Dan Friedman
+
+================================================================================
+
+Scheme:
+  - car
+  - cdr
+  - cons
+  - null?
+  - length
+
+  - arithmetic: (- n1 n2) is monus, (sub1 n) = n - 1 if n > 0 else 0
+
+================================================================================
+
+Sets:
+  - disallow repeated elements
+  - support membership testing
+  (define member?
+    (lambda (a set)
+      (cond
+       ((null? set) #f)
+       ((eqv? a (car set)) #t)
+       (else (member? a (cdr set))))))
+  (define rember
+    (lambda (a l)
+      (cond
+       ((null? l) '())
+       ((eqv? a (car l)) (cdr l))
+       (else (cons (car l) (rember a (cdr l)))))))
+  (define plus
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) n1)
+       (else (add1 (plus n1 (sub1 n2)))))))
+  (define mult
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) 0)
+       (else (plus n1 (mult n1 (sub1 n2)))))))
+
+================================================================================
+
+8-28
+
+(define rember
+    (lambda (a l)
+      (cond
+       ((null? l) '())
+       ((eqv? (car l) a) (rember a (cdr l)))
+       (else (cons (car l) (rember a (cdr l)))))))
+
+(define rember*
+    (lambda (a l)
+      (cond
+       ((null? l) '())
+       ((pair? (car l)) (cons (rember* a (car l)) (rember* a (cdr l))))
+       ((eqv? (car l) a) (rember* a (cdr l)))
+       (else (cons (car l) (rember* a (cdr l)))))))
+
+(define all-bool?
+    (lambda (l)
+      (cond
+       ((null? l) #t)
+       ((pair? (car l)) (and (all-bool? (car l)) (all-bool? (cdr l))))
+       ((boolean? (car l)) (all-bool? (cdr l)))
+       (else #f))))
+
+- Complicated data structures don't require complicated functions
+
+================================================================================
+
+(define plus
+  (lambda (n1 n2)
+    (cond
+     ((zero? n2) n1)
+     (else (add1 (plus n1 (sub1 n2)))))))
+
+(define mult
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) 0)
+       (else (plus n1 (mult n1 (sub1 n2)))))))
+
+(define arrow
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) 1)
+       (else (mult n1 (arrow n1 (sub1 n2)))))))
+
+(define double-arrow
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) 1)
+       (else (arrow n1 (double-arrow n1 (sub1 n2)))))))
+
+(define triple-arrow
+    (lambda (n1 n2)
+      (cond
+       ((zero? n2) 1)
+       (else (double-arrow n1 (triple-arrow n1 (sub1 n2)))))))
+
+(define G
+    (lambda (i)
+      (lambda (n1 n2)
+        (cond
+         ((zero? i) (cond
+                     ((zero? n2) n1)
+                     (else (add1 ((G 0) n1 (sub1 n2))))))
+         ((eqv? i 1) (cond
+                      ((zero? n2) 0)
+                      (else ((G (sub1 i)) n1 ((G i) n1 (sub1 n2))))))
+         (else (cond
+                ((zero? n2) 1)
+                (else ((G (sub1 i)) n1 ((G i) n1 (sub1 n2))))))))))
+
+(define GG
+    (lambda (i)
+      (lambda (n1 n2)
+        (cond
+         ((zero? i) (cond
+                     ((zero? n2) n1)
+                     (else (add1 ((GG 0) n1 (sub1 n2))))))
+         ((eqv? i 1) (cond
+                      ((zero? n2) 0)
+                      (else ((GG (sub1 i)) n1 ((GG i) n1 (sub1 n2))))))
+         (else (cond
+                ((zero? n2) 1)
+                (else ((GG (sub1 i)) n1 ((GG i) n1 (sub1 n2))))))))))
+
+- ... correctness-preserving transformations ...
+
+(define GG
+    (lambda (i n1 n2)
+      (cond
+       ((and (zero? n2) (zero? i)) n1)
+       ((and (zero? n2) (zero? (sub1 i))) 0)
+       ((zero? n2) 1)
+       ((zero? i) (add1 (GG i n1 (sub1 n2))))
+       (else (GG (sub1 i) n1 (GG i n1 (sub1 n2)))))))
+
+(define ackerman GG) ;; yep!
+
+================================================================================
+
+9-2
+
+- Our language is the lambda calculus.
+  - (lambda (x) body) : lambda term
+  - (M_1 M_2) : application
+  - x : variable
+
+- pmatch! pattern matching
+  - ` : quasiquote
+  - ' : quote
+  - , : unquote
+  - > `(mary had a little lamb)
+      '(mary had a little lamb)
+  - > (let ((name 'mary))
+        `(,name had a little lamb))
+      '(mary had a little lamb)
+  - unquote evaluates expressions
+
+(define -length
+  (lambda (l)
+    (pmatch l
+      (`(,a . ,d) (+ 1 (-length d)))
+      (else 0))))
+
+(define cons-cell-count
+  (lambda (tr)
+    (pmatch tr
+      (`(,a . ,d) (+ 1 (cons-cell-count a) (cons-cell-count d)))
+      (else 0))))
+
+(define stuff
+  (lambda (e)
+    (pmatch e
+      (`,x (guard (symbol? x)) 'foo)
+      (`(lambda (,x) ,body) 'foo)
+      (`(,rator ,rand) 'foo))))
