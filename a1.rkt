@@ -224,23 +224,8 @@
     ((one-case (odd-case (even-case base))) n)))
 
 ;; 22
+
+;; Basically the same quine... but it works.
 (define quine
-  ((lambda (x) (list x (list 'quote x)))
-   '(lambda (x) (list x (list 'quote x)))))
-
-;; (let ((s '(list 'let)))
-;;   (list 'let '(())))
-
-;; (define -quine
-;;   (let ((x '(lambda (x (list x (list 'quote x))))))
-;;     `(let ((x ,x)) x)))
-
-;; (letrec ((body '((letrec ((body #t)) body)))
-;;          (target (cadr (caadar body))))
-;;   (set-car! target body)
-;;   target)
-
-;; (letrec ((x `(3))) x)
-
-;; (let ((foo 5))
-;;   `(x ,foo))
+  ((lambda (x) `(,x ',x))
+   '(lambda (x) `(,x ',x))))
