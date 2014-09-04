@@ -183,3 +183,40 @@ Sets:
       (`,x (guard (symbol? x)) 'foo)
       (`(lambda (,x) ,body) 'foo)
       (`(,rator ,rand) 'foo))))
+
+================================================================================
+
+9-4
+
+(define assv
+  (lambda (x al)
+    (pmatch al
+      (`() #f)
+      (`(,A . ,D)
+       (cond
+        ((eqv? (car A) x) A)
+        (else (assv x D)))))))
+
+- De Bruijn indices
+
+(define map-alist ;; maybe useful?
+  (lambda (f al)
+    (pmatch al
+      (`() '())
+      (`(,A . ,D) (cons (cons (car A) (f (cdr A))) (map-alist f D))))))
+
+(define var-occurs-free?
+  (lambda (x e cenv)
+    (pmatch-who "vof?" e
+      (`,y (guard (symbol? y)) (and (eqv? y x) (not (memv x cenv))))
+      (`(lambda (,y) ,body) (var-occurs-free? x body (cons y cenv)))
+      (`(,rator ,rand) (or (var-occurs-free? x rator cenv)
+                           (var-occurs-free? x rand cenv))))))
+
+(define var-occurs-bound?
+  (lambda (x e cenv)
+    (pmatch-who "vob?" e
+      (`,y (guard (symbol? y)) (and (eqv? y x) (memv x cenv)))
+      (`(lambda (,y) ,body) (var-occurs-bound? x body (cons y cenv)))
+      (`(,rator ,rand) (or (var-occurs-bound? x rator cenv)
+                           (var-occurs-bound? x rand cenv))))))
