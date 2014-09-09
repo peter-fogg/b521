@@ -69,53 +69,45 @@
 ;; 8
 (define var-occurs-free?
   (lambda (x exp)
-    (letrec ((go (lambda (e env)
-                   (pmatch e
-                     (`,y (guard (symbol? y)) (and (eqv? x y) (not (memv y env))))
-                     (`(lambda (,y) ,body) (go body (union (list y) env)))
-                     (`(,rator ,rand) (or (go rator env)
-                                          (go rand env)))))))
-      (go exp '()))))
+    (pmatch exp
+      (`,y (guard (symbol? y)) (eqv? y x))
+      (`(lambda (,y) ,body) (and (var-occurs-free? x body) (not (eqv? y x))))
+      (`(,rator ,rand) (or (var-occurs-free? x rator)
+                           (var-occurs-free? x rand))))))
 
 ;; 9
 (define var-occurs-bound?
   (lambda (x exp)
-    (letrec ((go (lambda (e env)
-                   (pmatch e
-                     (`,y (guard (symbol? y))
-                          (cond
-                           ((and (eqv? x y) (memv y env)) #t)
-                           (else #f)))
-                     (`(lambda (,y) ,body) (go body (union (list y) env)))
-                     (`(,rator ,rand) (or (go rator env)
-                                          (go rand env)))))))
-      (go exp '()))))
+    (pmatch exp
+      (`,y (guard (symbol? y)) #f)
+      (`(lambda (,y) ,body) (or (var-occurs-bound? x body)
+                                (and (eqv? y x) (var-occurs-free? x body))))
+      (`(,rator ,rand) (or (var-occurs-bound? x rator)
+                           (var-occurs-bound? x rand))))))
 
 ;; 10
 (define unique-free-vars
   (lambda (exp)
-    (letrec ((go (lambda (e env)
-                   (pmatch e
-                     (`,x (guard (symbol? x)) (cond
-                                               ((memv x env) '())
-                                               (else (list x))))
-                     (`(lambda (,x) ,body) (go body (union (list x) env)))
-                     (`(,rator ,rand) (union (go rator env)
-                                             (go rand env)))))))
-      (go exp '()))))
+    (pmatch exp
+      (`,x (guard (symbol? x)) (list x))
+      (`(lambda (,x) ,body) (let ((ufv (unique-free-vars body)))
+                              (if (memv x ufv)
+                                  (remove x ufv)
+                                  ufv)))
+      (`(,rator ,rand) (union (unique-free-vars rator)
+                              (unique-free-vars rand))))))
 
 ;; 11
 (define unique-bound-vars
   (lambda (exp)
-    (letrec ((go (lambda (e env)
-                   (pmatch e
-                     (`,x (guard (symbol? x)) (cond
-                                               ((memv x env) (list x))
-                                               (else '())))
-                     (`(lambda (,x) ,body) (go body (union (list x) env)))
-                     (`(,rator ,rand) (union (go rator env)
-                                             (go rand env)))))))
-      (go exp '()))))
+    (pmatch exp
+      (`,x (guard (symbol? x)) '())
+      (`(lambda (,x) ,body) (let ((ubv (unique-bound-vars body)))
+                              (if (memv x (unique-free-vars body))
+                                  (union (list x) ubv)
+                                  ubv)))
+      (`(,rator ,rand) (union (unique-bound-vars rator)
+                              (unique-bound-vars rand))))))
 
 ;; 12
 (define lex
@@ -189,19 +181,21 @@
 ;; 15
 (define var-occurs-both?
   (lambda (x exp)
-    (letrec ((go (lambda (e env)
-                   (pmatch e
-                     (`,y (guard (symbol? y)) (cond
-                                               ((eqv? x y) (cond
-                                                            ((memv x env) '(bound))
-                                                            (else '(free))))
-                                               (else '())))
-                     (`(lambda (,y) ,body) (go body (cons y env)))
-                     (`(,rator ,rand) (union (go rator env)
-                                             (go rand env)))))))
-      (let ((result (go exp '())))
-        (cond
-         ((and (memv 'free result)
-                (memv 'bound result))
-          #t)
-         (else #f))))))
+   (letrec ((go (lambda (e)
+                  (pmatch e
+                    (`,y (guard (symbol? y)) (and (eqv? y x) (list 'free)))
+                    (`(lambda (,y) ,body) (let ((r (go body)))
+                                            (cond
+                                             ((not r) #f)
+                                             ((and (eqv? y x) (memv 'free r))
+                                              (list 'bound))
+                                             (else r))))
+                    (`(,rator ,rand) (let ((r (go rator))
+                                           (d (go rand)))
+                                       (and r d (union r d))))))))
+     (let ((result (go exp)))
+       (if (and result
+                (memv 'bound result)
+                (memv 'free result))
+           #t
+           #f)))))
