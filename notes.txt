@@ -220,3 +220,18 @@ Sets:
       (`(lambda (,y) ,body) (var-occurs-bound? x body (cons y cenv)))
       (`(,rator ,rand) (or (var-occurs-bound? x rator cenv)
                            (var-occurs-bound? x rand cenv))))))
+
+================================================================================
+
+9-9
+
+- The lambda calculus!
+
+(define valof
+  (lambda (exp env)
+    (pmatch exp
+      (`,n (guard (number? n)) n)
+      (`,x (guard (symbol? x)) (env x))
+      (`(lambda (,x) ,body) (lambda (a) (valof body (lambda (y) (if (eqv? y x) a (env y))))))
+      (`(zero? ,n-exp) (zero? (valof n-exp env)))
+      (`(,rator ,rand) ((valof rator env) (valof rand env))))))
