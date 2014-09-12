@@ -235,3 +235,94 @@ Sets:
       (`(lambda (,x) ,body) (lambda (a) (valof body (lambda (y) (if (eqv? y x) a (env y))))))
       (`(zero? ,n-exp) (zero? (valof n-exp env)))
       (`(,rator ,rand) ((valof rator env) (valof rand env))))))
+
+================================================================================
+
+- Representation independence in interpreters
+
+(define valof
+  (lambda (exp env)
+    (pmatch exp
+      (`,x (guard (symbol? x)) (apply-env env x))
+      (`(lambda (,x) ,body) (lambda (a) (valof body (extend-env x a env))))
+      (`(,rator ,rand) ((valof rator env) (valof rand env))))))
+
+(define extend-env
+  (lambda (x a env)
+     (lambda (y) (if (eqv? x y) a (apply-env env y)))))
+
+(define empty-env
+  (lambda ()
+    (lambda (y)
+      (error "empty environment"))))
+
+(define apply-env
+  (lambda (env x)
+    (env x)))
+
+- Or we can write:
+
+(define apply-env
+  (lambda (env x)
+    (pmatch env
+      (`(empty-env) (error "empty environment"))
+      (`(extend-env ,x ,a ,env) (if (eqv? x y)
+                                    a
+                                    (apply-env env x))))))
+
+(define extend-env
+  (lambda (x a env)
+    `(extend-env ,x ,a ,env)))
+
+(define empty-env
+  (lambda ()
+    '(empty-env)))
+
+- So we have two different representations for the same problem --
+  valof doesn't care which environment type we have.
+
+- With abstraction over closures:
+
+(define valof
+  (lambda (exp env)
+    (pmatch exp
+      (`,x (guard (symbol? x)) (apply-env env x))
+      (`(lambda (,x) ,body) (closure x body env))
+      (`(,rator ,rand) (apply-closure (valof rator env) (valof rand env))))))
+
+(define closure
+  (lambda (x body env)
+    (lambda (a)
+      (valof body (extend-env x a env)))))
+
+(define apply-closure
+  (lambda (p a)
+    (p a)))
+
+-- Or:
+
+(define closure
+  (lambda (x body env)
+    `(closure ,x ,body ,env)))
+
+(define apply-closure
+  (lambda (p a)
+    (pmatch p
+      (`(closure ,x ,body ,env) (valof body (extend-env x a env))))))
+
+- Recursion with omega combinator:
+  ((lambda (f) (f f))
+   (lambda (f) (f f)))
+
+- Recursion with Y!
+(define Y
+  (lambda (f)
+    ((lambda (x) (x x))
+     (lambda (x) (f (lambda (y) ((x x) y)))))))
+
+(define fac
+  (lambda (recur)
+    (lambda (n)
+      (if (zero? n)
+          1
+          (* n (recur (sub1 n)))))))
