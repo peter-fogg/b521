@@ -356,3 +356,57 @@ Sets:
 >                                                                 (env^ y))))))
 >       (`(,rator ,rand) ((valof rator env) (valof rand env) env)))))
 
+================================================================================
+
+9-18
+
+- Boxes
+
+> (let ((x 5))
+    (box x))
+> (set-box! a-box 120)
+
+- Side effects in the language -- set!
+
+> (define valof-mut
+>   (lambda (exp env)
+>     (pmatch exp
+>       (`,x (guard (symbol? x)) (unbox (env x)))
+>       (`(lambda (,x) ,body) (lambda (a) (valof-mut body (lambda (y)
+>                                                       (if (eqv? y x)
+>                                                           (box a)
+>                                                           (env y))))))
+>       (`(,rator ,x) (guard (symbol? x)) ((valof-mut rator env) (box (unbox (env x)))))
+>       (`(,rator ,rand) ((valof-mut rator env) (box (valof-mut rand env)))))))
+
+- Laziness (call-by-name, call-by-need)
+
+> (define apply-env
+>   (lambda (env x)
+>     (env x)))
+> 
+> (define extend-env
+>   (lambda (x a env)
+>     (lambda (y)
+>       (if (eqv? y x)
+>           (box (lambda () a))
+>           (apply-env y)))))
+> 
+> (define valof-name
+>   (lambda (exp env)
+>     (pmatch exp
+>       (`,x (guard (symbol? x)) ((unbox (apply-env env x))))
+>       (`(lambda (,x) ,body) (lambda (a) (valof-name body (extend-env x a env))))
+>       (`(,rator ,x) (guard (symbol? x)) ((valof-name rator env) (box (unbox (apply-env env x)))))
+>       (`(,rator ,rand) ((valof-name rator env) (box (lambda () (valof-name rand env))))))))
+> 
+> (define valof-need
+>   (lambda (exp env)
+>     (pmatch exp
+>       (`,x (guard (symbol? x)) (let* ((b (apply-env env x))
+>                                       (val ((unbox b))))
+>                                  (begin (set! b (lambda () val)) val)))
+>       (`(lambda (,x) ,body) (lambda (a) (valof-need body (extend-env x a env))))
+>       (`(,rator ,x) (guard (symbol? x)) ((valof-need rator env) (box (unbox (apply-env env x)))))
+>       (`(,rator ,rand) ((valof-need rator env) (box (lambda () (valof-need rand env))))))))
+
