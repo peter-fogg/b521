@@ -215,29 +215,31 @@
 
 ;; Just Dessert
 
-(define c0 (lambda (f) (lambda (x) x)))
-(define c5 (lambda (f) (lambda (x) (f (f (f (f (f x))))))))
+;; (define c0 (lambda (f) (lambda (x) x)))
+;; (define c5 (lambda (f) (lambda (x) (f (f (f (f (f x))))))))
 
-(define c+
-  (lambda (n m)
-    (lambda (f)
-      (lambda (x)
-        ((n f) ((m f) x))))))
+;; (define c+
+;;   (lambda (n m)
+;;     (lambda (f)
+;;       (lambda (x)
+;;         ((n f) ((m f) x))))))
 
-(define csub1
-  (lambda (n)
-    (lambda (f)
-      (lambda (x)
-        ((n f) x)))))
-
-;; let's not do this one
 ;; (define csub1
 ;;   (lambda (n)
 ;;     (lambda (f)
-;;       (let* ((used #f)
-;;              (new-f (lambda (y)
-;;                       (if used
-;;                           (f y)
-;;                           (begin (set! used #t) y)))))
-;;         (lambda (x)
-;;           ((n new-f) x))))))
+;;       (lambda (x)
+;;         ((n f) x)))))
+
+;; OK so this *works*, but it's probably not what Kleene did because
+;; it's sure as hell not the pure lambda calculus. I didn't have time
+;; to get the the dentist this week.
+(define csub1
+  (lambda (n)
+    (lambda (f)
+      (let* ((used #f)
+             (new-f (lambda (y)
+                      (if used
+                          (f y)
+                          (begin (set! used #t) y)))))
+        (lambda (x)
+          ((n new-f) x))))))
