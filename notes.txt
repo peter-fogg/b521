@@ -326,3 +326,33 @@ Sets:
       (if (zero? n)
           1
           (* n (recur (sub1 n)))))))
+
+================================================================================
+
+9-16
+
+- Dynamic and lexical scope
+
+> (let ((a 1))
+>   (let ((whats-a? (lambda (_) a)))
+>     (let ((a 2))
+>       (whats-a? 0))))
+
+- In Racket, returns 1
+- In elisp (with `(funcall whats-a? 0)`), returns 2
+
+- `dlambda` gives dynamic scope, `lambda` lexical scope:
+> (define valof
+>   (lambda (e env)
+>     (pmatch e
+>       (`,x (guard (symbol? x)) (env x))
+>       (`(lambda (,x) ,body) (lambda (a env) (valof body (lambda (y)
+>                                                           (if (eqv? y x)
+>                                                               a
+>                                                               (env y))))))
+>       (`(dlambda (,x) ,body) (lambda (a env^) (valof body (lambda (y)
+>                                                             (if (eqv? y x)
+>                                                                 a
+>                                                                 (env^ y))))))
+>       (`(,rator ,rand) ((valof rator env) (valof rand env) env)))))
+
