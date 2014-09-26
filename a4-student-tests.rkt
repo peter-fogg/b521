@@ -30,7 +30,7 @@ time-for-eval and space-for-eval.
                    (read-accept-lang #t))
       (let ((sandboxed-eval
              (make-module-evaluator (read (open-input-file file))
-                                    #:allow-for-require '("./pmatch.rkt"))))
+                                    #:allow-for-require '(C311/pmatch))))
         (set-eval-limits sandboxed-eval sec mb)
         (parameterize ((current-eval sandboxed-eval)
 	               (error-print-context-length 0))
