@@ -410,3 +410,65 @@ Sets:
 >       (`(,rator ,x) (guard (symbol? x)) ((valof-need rator env) (box (unbox (apply-env env x)))))
 >       (`(,rator ,rand) ((valof-need rator env) (box (lambda () (valof-need rand env))))))))
 
+================================================================================
+
+9-30
+
+- Controlling order of evaluation
+  - If (h (f x) (g y)), which of f and g are evaluated first?
+  - Make explicit with
+  > (let ((a (f x)))
+  >   (let ((b (g y)))
+  >     (h a b)))
+  - A-normal form.
+  > (if (h (f x) (g y))
+  >     (r s)
+  >     (t u))
+  - How do we ANF this?
+  > (let ((a (f x)))
+  >   (let ((b (g y)))
+  >     (let ((bool (h a b)))
+  >       (if bool
+  >           (r s)
+  >           (t u)))))
+  - All arguments to functions are just variable lookups.
+  - CPS
+  - Transform original programs to:
+  > (f x (lambda (a)
+  >        (g y (lambda (b)
+  >               (h a b (lambda (x) x))))
+  > (f x (lambda (a)
+  >        (g y (lambda (b)
+  >               (h a b (lambda (bool)
+  >                        (if bool
+  >                            (r s k)
+  >                            (t u k))))))))
+  - Factorial
+  > (define !
+  >   (lambda (n k)
+  >     (if (zero? n)
+  >         (k 1)
+  >         (! (sub1 n) (lambda (m)
+  >                       (k (* m n)))))))
+  > (define filter-cps
+  >   (lambda (p ls k)
+  >     (cond
+  >      ((null? ls) (k '()))
+  >      (else (p (car ls) (lambda (b)
+  >                          (if b
+  >                              (filter-cps p (cdr ls) (lambda (ls^) (k (cons (car ls) ls^))))
+  >                              (filter-cps p (cdr ls) k))))))))
+  - Eta expansion: if we have (lambda (a) (f a))
+    - f cannot loop,
+    - a is a variable,
+    - a is not free in f,
+    - then we can eta-reduce to f.
+  - Alternatively,
+  > (define filter-cps^
+  >   (lambda (p ls k)
+  >     (cond
+  >      ((null? ls) (k '()))
+  >      (else (p (car ls) (lambda (b)
+  >                          (filter-cps^ p (cdr ls) (if b
+  >                                                      (lambda (ls^) (k (cons (car ls) ls^)))
+  >                                                      k))))))))
