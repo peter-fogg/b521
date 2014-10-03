@@ -472,3 +472,45 @@ Sets:
   >                          (filter-cps^ p (cdr ls) (if b
   >                                                      (lambda (ls^) (k (cons (car ls) ls^)))
   >                                                      k))))))))
+
+================================================================================
+
+10-2
+
+> (define !-cps
+>   (lambda (n k)
+>     (if (zero? n)
+>         (k 1)
+>         (!-cps (sub1 n) (lambda (m)
+>                           (k (* n m)))))))
+>
+> (define !-cps-cps
+>   (lambda (n c k)
+>     (if (zero? n)
+>         (c 1 k)
+>         (!-cps-cps (sub1 n)
+>                    (lambda (n^ k)
+>                      (c (* n n^) k))
+>                    k))))
+>
+> (!-cps-cps 5 (lambda (x k) (k x)) (lambda (x) x))
+- A CPSed interpreter:
+> (define valof-cps
+>   (lambda (exp env k)
+>     (pmatch exp
+>       (`,x (guard (symbol? x)) (env x k))
+>       (`(lambda (,x) ,body) (k (lambda (a k) (valof-cps body (lambda (y k)
+>                                                                (if (eqv? y x)
+>                                                                    (k a)
+>                                                                    (env y k)))
+>                                                         k))))
+>       (`(capture ,k^^ ,body) (valof-cps body (lambda (y k^)
+>                                                (if (eqv? y k^^)
+>                                                    (k^ k)
+>                                                    (env y k^)))
+>                                         k))
+>       (`(return ,v-exp ,k-exp) (valof-cps k-exp env (lambda (k)
+>                                                       (valof-cps v-exp env k))))
+>       (`(,rator ,rand) (valof-cps rator env (lambda (rator^)
+>                                               (valof-cps rand env (lambda (rand^)
+>                                                                     (rator^ rand^ k)))))))))
