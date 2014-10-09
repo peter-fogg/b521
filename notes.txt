@@ -592,3 +592,54 @@ Sets:
 >
 > (define empty-k
 >   `(empty-k))
+
+================================================================================
+
+10-9
+
+- Goal: translate Scheme to other languages (like C).
+- CPS allows us to not worry about blowing the stack.
+(define subst/?-cps
+  (lambda (x e k)
+    (cond
+     ((pair? e) (subst/?-cps x (car e) (lambda (v)
+                                         (subst/?-cps x (cdr e)
+                                                      (lambda (u)
+                                                        (k (cons v u)))))))
+     ((eqv? e x) (k '?))
+     (else (k e)))))
+
+(define app-k-ri
+  (lambda (k x)
+    (k x)))
+
+(define inner-k-ri
+  (lambda (v k)
+    (lambda (u)
+      (app-k-ri k (cons v u)))))
+
+(define outer-k-ri
+  (lambda (x e k)
+    (lambda (v)
+      (subst/?-ri x (cdr e) (inner-k-ri v k)))))
+
+(define empty-k-ri
+  (lambda ()
+    (lambda (x) x)))
+
+(define subst/?-ri
+  (lambda (x e k)
+    (cond
+     ((pair? e) (subst/?-ri x (car e) (outer-k-ri x e k)))
+     ((eqv? e x) (app-k-ri k '?))
+     (else (app-k-ri k e)))))
+
+- And then we turn it to a data structure representation but I'm tired
+  of typing/can't keep up with Jason.
+- Then, convert to ANF: make sure that all tail calls are called with variables
+  as arguments -- so, (f 4 (car l)) becomes (let ((x 4)) (let ((l (car l)) (f x l)))).
+- Now we can turn every instance of let to set!
+- This is registerization. All variables are in global registers, and we've
+  taken all arguments out and reordered all set!s such that we don't accidentally overwrite
+  a register whose value is needed.
+- Now we can easily translate to C -- set! is variable assignment, function calls are gotos.
