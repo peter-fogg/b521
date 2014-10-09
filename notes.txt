@@ -514,3 +514,81 @@ Sets:
 >       (`(,rator ,rand) (valof-cps rator env (lambda (rator^)
 >                                               (valof-cps rand env (lambda (rand^)
 >                                                                     (rator^ rand^ k)))))))))
+
+================================================================================
+
+9/7
+
+- Representationally independent CPSed interpreter.
+> (define extend-env
+>   (lambda (env a x k)
+>     (apply-k k (lambda (y k)
+>                  (if (eqv? y x)
+>                      (apply-k k a)
+>                      (apply-env env y k))))))
+>
+> (define apply-env
+>   (lambda (env y k)
+>     (env y k)))
+>
+> (define empty-env
+>   (lambda ()
+>     (lambda (y k)
+>       (apply-k k (error "unbound variable" y)))))
+>
+> (define closure
+>   (lambda (x body env)
+>     (lambda (a k)
+>       (extend-env env a x (lambda (env)
+>                             (valof body env k))))))
+>
+> (define apply-closure
+>   (lambda (c a k)
+>     (c a k)))
+>
+> (define empty-k
+>   (lambda ()
+>     (lambda (x) x)))
+>
+> (define apply-k
+>   (lambda (k a)
+>     (k a)))
+> 
+> (define inner-k
+>   (lambda (closure k)
+>     (lambda (arg)
+>       (apply-closure closure arg k))))
+>
+> (define outer-k
+>   (lambda (rand env k)
+>     (lambda (closure)
+>       (valof rand env (inner-k closure k)))))
+>
+> (define valof
+>   (lambda (exp env k)
+>     (pmatch exp
+>       (`,x (guard (symbol? x)) (apply-env env x k))
+>       ;; (`,n (guard (number? n)) (apply-k k n))
+>       ;; (`(+ ,n1 ,n2) (valof n1 env (lambda (n1)
+>       ;;                               (valof n2 env (lambda (n2)
+>       ;;                                               (apply-k k (+ n1 n2)))))))
+>       (`(lambda (,x) ,body) (apply-k k (closure x body env)))
+>       (`(,rator ,rand) (valof rator env (outer-k rand env k))))))
+- Changing to data structures:
+> (define apply-k
+>   (lambda (k v)
+>     (pmatch k
+>       (`(empty-k) v)
+>       (`(inner-k ,closure ,k^) (apply-closure closure v k^))
+>       (`(outer-k ,rand ,env ,k^) (valof rand env (inner-k v k^))))))
+>
+> (define inner-k
+>   (lambda (closure k)
+>     `(inner-k ,closure ,k)))
+>
+> (define outer-k
+>   (lambda (rand env k)
+>     `(outer-k ,rand ,env ,k)))
+>
+> (define empty-k
+>   `(empty-k))
