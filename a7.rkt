@@ -182,7 +182,7 @@
       (apply-k-fn k (* n1 n2)))))
 
 (define outer-times-k-fn
-  (lambda (n2 k)
+  (lambda (n2 env k)
     (lambda (n1)
       (value-of-cps-fn
        n2 env (inner-times-k-fn k n1)))))
@@ -230,7 +230,7 @@
     (pmatch expr
       (`,n (guard (or (number? n) (boolean? n))) (apply-k-fn k n))
       (`(+ ,n1 ,n2) (value-of-cps-fn n1 env (outer-plus-k-fn n2 env k)))
-      (`(* ,n1 ,n2) (value-of-cps-fn n1 env (outer-times-k-fn n2 k)))
+      (`(* ,n1 ,n2) (value-of-cps-fn n1 env (outer-times-k-fn n2 env k)))
       (`(sub1 ,n) (value-of-cps-fn n env (sub1-k-fn k)))
       (`(zero? ,n) (value-of-cps-fn n env (zero?-k-fn k)))
       (`(if ,test ,conseq ,alt) (value-of-cps-fn test env (if-k-fn conseq alt env k)))
@@ -258,7 +258,7 @@
       (`(inner-plus-k-ds ,k ,n1) (apply-k-ds k (+ n1 v)))
       (`(outer-plus-k-ds ,n2 ,env ,k) (value-of-cps-ds n2 env (inner-plus-k-ds k v)))
       (`(inner-times-k-ds ,k ,n1) (apply-k-ds k (* n1 v)))
-      (`(outer-times-k-ds ,n2 ,k) (value-of-cps-ds n2 env (inner-times-k-ds k v)))
+      (`(outer-times-k-ds ,n2 ,env ,k) (value-of-cps-ds n2 env (inner-times-k-ds k v)))
       (`(sub1-k-ds ,k) (apply-k-ds k (sub1 v)))
       (`(zero?-k-ds ,k) (apply-k-ds k (zero? v)))
       (`(if-k-ds ,conseq ,alt ,env ,k) (if v
@@ -282,8 +282,8 @@
     `(inner-times-k-ds ,k ,n1)))
 
 (define outer-times-k-ds
-  (lambda (n2 k)
-    `(outer-times-k-ds ,n2 ,k)))
+  (lambda (n2 env k)
+    `(outer-times-k-ds ,n2 ,env ,k)))
 
 (define sub1-k-ds
   (lambda (k)
@@ -318,7 +318,7 @@
     (pmatch expr
       (`,n (guard (or (number? n) (boolean? n))) (apply-k-ds k n))
       (`(+ ,n1 ,n2) (value-of-cps-ds n1 env (outer-plus-k-ds n2 env k)))
-      (`(* ,n1 ,n2) (value-of-cps-ds n1 env (outer-times-k-ds n2 k)))
+      (`(* ,n1 ,n2) (value-of-cps-ds n1 env (outer-times-k-ds n2 env k)))
       (`(sub1 ,n) (value-of-cps-ds n env (sub1-k-ds k)))
       (`(zero? ,n) (value-of-cps-ds n env (zero?-k-ds k)))
       (`(if ,test ,conseq ,alt) (value-of-cps-ds test env (if-k-ds conseq alt env k)))
@@ -344,6 +344,12 @@
   (lambda (f l1 l2 l3)
     (cons$ (f (car$ l1) (car$ l2) (car$ l3))
            (zip-with-3 f (cdr$ l1) (cdr$ l2) (cdr$ l3)))))
+
+(define take$
+  (lambda (n $)
+    (if (zero? n)
+        '()
+        (cons (car$ $) (take$ (sub1 n) (cdr$ $))))))
 
 (define trib$
   (cons$ 0 (cons$ 1 (cons$ 1 (zip-with-3 + trib$ (cdr$ trib$) (cdr$ (cdr$ trib$)))))))

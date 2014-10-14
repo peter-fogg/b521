@@ -93,6 +93,35 @@ http://docs.racket-lang.org/rackunit/?q=rackunit
 	((car$ (cdr$ trib$)) 1)
 	((take$ 7 trib$) '(0 1 1 2 4 7 13))))))
 
+;; Copied over from a6
 
+(define-syntax test-if-defined
+  (syntax-rules ()
+    ((_ sym tests ...)
+     (test-case (format "~a undefined" 'sym)
+                (check-not-false (lambda () (eval 'sym)))
+                tests ...))))
 
+(define-syntax test-equal-if-defined
+  (syntax-rules ()
+    ((_ ident (expr val) ...)
+      (let ((n 1))
+        (test-case (format "~a: undefined" 'ident)
+                   (check-not-exn (lambda () (eval 'ident)))
+                   (test-case (format "~a: ~a" 'ident n)
+                              (with-check-info 
+                               (('tested 'expr))
+                               (set! n (add1 n))
+                               (check equal? (eval 'expr) val))) ...)))))
 
+(define-syntax ifdef-suite
+  (syntax-rules ()
+    ((_ ident (expr val) ...)
+     (let ((n 1))
+       (test-suite (~a 'ident)
+        (test-case "undefined"
+         (check-not-exn (lambda () (eval 'ident)))
+         (test-case (~a n)
+          (with-check-info (('tested 'expr))
+           (set! n (add1 n))
+           (check equal? (eval 'expr) val))) ...))))))
