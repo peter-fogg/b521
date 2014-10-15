@@ -417,6 +417,12 @@
         (list k (convert-trivial exp))
         (list (convert-serious exp) k))))
 
+;; USING THE CPS CONVERTER
+
+;; Just call (value-of (convert-cps <lambda expression>) (empty-env)).
+;; This will give a function taking the initial continuation, so just
+;; call that result with (empty-k), where empty-k is just the identity.
+
 (define convert-cps
   (lambda (exp)
     (let ((k (new-k)))
