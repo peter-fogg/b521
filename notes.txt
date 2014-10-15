@@ -643,3 +643,9 @@ Sets:
   taken all arguments out and reordered all set!s such that we don't accidentally overwrite
   a register whose value is needed.
 - Now we can easily translate to C -- set! is variable assignment, function calls are gotos.
+
+================================================================================
+
+10-14
+
+- Jason prohibited laptops...
