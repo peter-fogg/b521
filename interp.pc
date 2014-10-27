@@ -1,8 +1,3 @@
-#lang racket
-
-(require "parenthec.rkt")
-(require C311/pmatch)
-
 (define-union exp
   (const n)
   (var v)
@@ -153,7 +148,7 @@
   ;; env num k
   (union-case env-reg envr
               [(empty) (begin
-                         (set! v-reg (error 'env "unbound variable"))
+                         (error 'env "unbound variable")
                          (set! pc apply-k))]
               [(extend arg env)
                (if (zero? num-reg)
@@ -186,7 +181,7 @@
                     (exp_const 6)))
     (set! pc value-of)
     (mount-trampoline cont_empty-k k-reg pc)
-    (pretty-print v-reg)
+    (printf "~s\n" v-reg)
     (set! env-reg (envr_empty))
     (set! expr-reg (exp_app
                     (exp_lambda
@@ -203,7 +198,7 @@
                                          (exp_sub1 (exp_var 0)))))))))
     (set! pc value-of)
     (mount-trampoline cont_empty-k k-reg pc)
-    (pretty-print v-reg)
+    (printf "~s\n" v-reg)
     (set! expr-reg (exp_mult (exp_const 2)
                              (exp_capture
                               (exp_mult (exp_const 5)
@@ -212,7 +207,7 @@
     (set! env-reg (envr_empty))
     (set! pc value-of)
     (mount-trampoline cont_empty-k k-reg pc)
-    (pretty-print v-reg)
+    (printf "~s\n" v-reg)
     (set! env-reg (envr_empty))
     (set! expr-reg (exp_let
                     (exp_lambda
@@ -228,6 +223,4 @@
                     (exp_app (exp_app (exp_var 0) (exp_var 0)) (exp_const 5))))
     (set! pc value-of)
     (mount-trampoline cont_empty-k k-reg pc)
-    (pretty-print v-reg)))
-
-(main)
+    (printf "~s\n" v-reg)))
