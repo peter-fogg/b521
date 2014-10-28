@@ -798,3 +798,56 @@
       (tramp))))
 
 ;; Arg, I fucked something up
+
+;; ================================================================================
+
+;; What if we want to do two operations on a list without passing over
+;; it twice?
+
+(require c311/let-pair)
+(require c311/pmatch)
+
+(define sumXmaxls
+  (lambda (ls)
+    (cond
+     ((null? ls) '(0 . 0))
+     (else (let-pair ((s . m) (sumXmaxls (cdr ls)))
+             `(,(+ (car ls) s) . ,(max (car ls) m)))))))
+
+(define fib
+  (lambda (n s)
+    (cond
+     ((assv n s) => (lambda (pr) `(,(cdr pr) . ,s)))
+     ((< n 2) `(,n . ((,n . ,n) . ,s)))
+     (else (let-pair ((u . s^) (fib (- n 2) s))
+             (let-pair ((v . s^^) (fib (sub1 n) s^))
+               (let ((uv (+ u v)))
+                 `(,uv ((,n . ,uv) . ,s^^)))))))))
+
+;; Store-passing style
+
+(define apply-env
+  (lambda (env y)
+    (cdr (assv env y))))
+
+(define closure
+  (lambda (x body env)
+    `(closure ,x ,body ,env)))
+
+(define apply-closure
+  (lambda (clos arg s^^)
+    (pmatch clos
+      (`(closure ,x ,body ,env)
+       (valof body `((,x . ,(length s^^)) . ,env) (append (s^^ (list arg))))))))
+
+(define valof
+  (lambda (exp env s)
+    (pmatch exp
+      (`(,x (guard (symbol? x))) (let ((addr (apply-env env x)))
+                                   `(,(list-ref s addr) . ,s)))
+      (`(lambda (,x) ,body) `(,(closure x body env) . ,s))
+      (`(,rator ,rand) (let-pair ((arg . s^) (valof rand env s))
+                         (let-pair ((clos . s^^) (valof rator env s^))
+                           (apply-closure clos arg s^^)))))))
+
+;; add set! at some point...
