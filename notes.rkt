@@ -851,3 +851,36 @@
                            (apply-closure clos arg s^^)))))))
 
 ;; add set! at some point...
+
+;; ================================================================================
+
+;; Macros!
+
+(define-syntax loop
+  (syntax-rules ()
+    ((loop) (loop))))
+
+(define-syntax ifte
+  (syntax-rules (then else)
+    ((_ test then t else f) (if test t f))))
+
+(define-syntax my-or
+  (syntax-rules ()
+    ((_) #f)
+    ((_ b c ...) (let ((v b))
+                   (if v
+                       v
+                       (my-or c ...))))))
+
+(define-syntax my-let
+  (syntax-rules ()
+    ((_ ((var val) ...) body)
+     ((lambda (var ...) body) val ...))))
+
+(define-syntax my-let*
+  (syntax-rules ()
+    ((_ () body) body)
+    ((_ ((var1 val1) (var2 val2) ...) body)
+     ((lambda (var1)
+        (my-let* ((var2 val2) ...)
+          body)) val1))))
