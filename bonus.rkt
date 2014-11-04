@@ -1,6 +1,6 @@
 #lang racket
 
-(require c311/let-pair)
+(require C311/let-pair)
 
 ;; 1
 
@@ -87,6 +87,10 @@
 
 ;; Just Dessert
 
+;; This condre supports let, let*, letrec, =>, multiple bodies in an
+;; implicit begin, multiple bodies after an arrow, and all the normal
+;; cond stuff.
+
 (define-syntax condre
   (syntax-rules (else => let let* letrec)
     ((_) (void))
@@ -100,17 +104,13 @@
      (let* ((var val) ...)
        (condre rest ...)))
     ((_ (else res)) res)
+    ((_ (clause) rest ...) (if clause clause
+                               (condre rest ...)))
     ((_ (test => f ...) rest ...) (let ((r test))
                                     (if r
                                         (begin
                                           (f r) ...)
                                         (condre rest ...))))
-    ((_ (test res) rest ...) (if test res
+    ((_ (test res ...) rest ...) (if test
+                                     (begin res ...)
                                  (condre rest ...)))))
-
-(condre
- ((null? '(1)) 'asplode)
- (letrec ((a 5)
-          (b (add1 a))
-          (f (lambda (x) (if (zero? x) 1 (* x (f (sub1 x)))))))
-   (a => display f)))
