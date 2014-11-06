@@ -884,3 +884,122 @@
      ((lambda (var1)
         (my-let* ((var2 val2) ...)
           body)) val1))))
+
+;; ================================================================================
+
+;; Mini-Kanren
+
+; Functions versus relations
+
+(load "C311/mk.rkt")
+
+(run 1 (q) (== 5 5))
+;; (_.0)
+
+(run 1 (q) (== 5 6))
+;; ()
+
+(run 1 (q) (== q 6))
+;; (q)
+
+(run 1 (q) (== q 6) (== q 7))
+;; ()
+;; Implicit conjunction of goals.
+
+(run 1 (q)
+  (fresh (a b)
+    (conde
+      ((== q `(,a ,b)))
+      ((== a b)))))
+;; ((_.0 _.1))
+
+(define append
+  (lambda (l s)
+    (cond
+     ((null? l) s)
+     (else (cons (car l) (append (cdr l) s))))))
+
+;; translating to mini kanren...
+
+(define appendo
+  (lambda (l s o)
+    (conde
+     ((== l '()) (== s o))
+     ((=/= l '())
+      (fresh (a d)
+        (== `(,a . ,d) l)
+        (fresh (res)
+          (appendo d s res)
+          (== o `(,a . ,res))))))))
+
+(run 1 (q)
+  (fresh (a b)
+    (== a '(1 2 3))
+    (== b '(4 5 6))
+    (appendo a b q)))
+
+;; ================================================================================
+
+;; terms := sym | bool | term * term | vars
+;; vars := Nat
+
+(define var? number?)
+(define var identity)
+
+;; Substitutions
+(define (ext-s x v s) `((,x . ,v) . ,x))
+
+(define (walk u s)
+  (let ((pr (assv u s)))
+    (if pr
+        (walk (cdr pr) s)
+        u)))
+
+(define (unify u v s)
+  (let ((u (walk u s))
+        (v (walk v s)))
+    (cond
+     ((eqv? u v) s)
+     ((var? u) (ext-s u v s))
+     ((var? v) (ext-s v u s))
+     ((and (pair? u) (pair? v))
+      (let ((s (unify (car u) (car v)) s))
+        (and s (unify (cdr u) (cdr v)))))
+     (else #f))))
+
+(define (== u v)
+  (lambda (s/c)
+    (let ((s (unify u v (car s/c))))
+      (if s
+          (list (cons s (cdr s/c)))
+          '()))))
+
+;; state ::= subst * counter
+;; goal ::= state -> stream
+
+;; call/fresh :: (var -> goal) -> goal
+(define (call/fresh f)
+  (lambda (s/c)
+    (let ((c (cdr s/c)))
+      ((f (var c)) `(,(car s/c) . ,(add1 c))))))
+
+(define (disj g1 g2)
+  (lambda (s/c)
+    ($append (g1 s/c) (g2 s/c))))
+
+(define ($append $1 $2)
+  (cond
+   ((null? $1) $2)
+   ((pair? $1) (cons (car $1) ($append (cdr $1) $2)))))
+
+(define (conj g1 g2)
+  (lambda (s/c)
+    ($append-map g2 (g1 s/c))))
+
+(define ($append-map g $)
+  (cond
+   ((null? $) '())
+   ((pair? $) ($append (g (car $)) ($append-map g (cdr $))))))
+
+(define-syntax-rule (lambdac fs ge)
+  (lambda (fs (lambda (s/c) (lambda (ge s/c))))))
